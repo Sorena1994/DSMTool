@@ -1,0 +1,2 @@
+This repository will be the placeholder for this ongoing project. The goal is to create a Desktop Application with PyQt to 
+monitor system and internet data usage. Eventually, more features will be added. 
