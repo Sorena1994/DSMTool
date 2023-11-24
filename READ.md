@@ -1,2 +1,2 @@
-This repository will be the placeholder for this ongoing project. The goal is to create a Desktop Application with PyQt to 
-monitor system and internet data usage. Eventually, more features will be added. 
+This repository is the placeholder for the code and installation files related to Diagnostics and System Monitoring Tool (DSM-Tool). 
+Contributions are welcome if they can add a new feature or improve an existing one. 
