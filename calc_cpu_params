@@ -1,0 +1,102 @@
+from PyQt6.QtWidgets import QApplication, QWidget, QTableWidget, QTableWidgetItem, QVBoxLayout
+from PyQt6.QtCore import QThread, pyqtSignal
+import sys
+from datetime import timedelta
+import psutil
+
+class WorkerThread(QThread):
+    update_signal = pyqtSignal(dict)
+
+    def __init__(self):
+        super().__init__()
+
+    def run(self):
+        while True:
+            data = self.get_cpu_data()
+            self.update_signal.emit(data)
+            self.msleep(20)  
+
+    def get_cpu_data(self):
+        processes = list(psutil.process_iter(['pid', 'num_threads', 'num_handles']))
+
+        total_threads = sum(process.info['num_threads'] for process in processes)
+        total_handles = sum(process.info['num_handles'] for process in processes)
+
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+        cpu_speed = psutil.cpu_freq().current / 1000  # Convert to GHz
+        num_processes = len(processes)
+
+        # Get system uptime
+        boot_time = psutil.boot_time()
+        current_time = psutil.time.time()
+        uptime_seconds = current_time - boot_time
+        uptime_timedelta = timedelta(seconds=uptime_seconds)
+
+        # Format uptime
+        uptime_formatted = "{:0>2}:{:0>2}:{:0>2}:{:0>2}".format(
+            uptime_timedelta.days,
+            uptime_timedelta.seconds // 3600,
+            (uptime_timedelta.seconds // 60) % 60,
+            uptime_timedelta.seconds % 60
+        )
+
+        return {
+            "CPU Utilization Percent": cpu_percent,
+            "CPU Speed (GHz)": cpu_speed,
+            "Processes": num_processes,
+            "Threads": total_threads,
+            "Handles": total_handles,
+            "System Up time": uptime_formatted
+        }
+
+class cpu_TableWidget(QTableWidget):
+    def __init__(self):
+        super().__init__(3, 2)
+        self.worker_thread = WorkerThread()
+        self.worker_thread.update_signal.connect(self.update_table_vals)
+        self.worker_thread.start()
+
+        self.setTableContents()
+
+    def setTableContents(self):
+        row = 0
+        col = 0
+
+        for key, value in self.worker_thread.get_cpu_data().items():
+            item = QTableWidgetItem(f"{key}: {value}")
+            self.setItem(row, col, item)
+            font = item.font()
+            font.setPointSize(10)
+            item.setFont(font)
+
+            col += 1
+            if col >= self.columnCount():
+                col = 0
+                row += 1
+        
+        self.setShowGrid(False)
+        self.verticalHeader().setVisible(False)
+        self.horizontalHeader().setVisible(False)
+        self.resizeColumnsToContents()
+
+    def update_table_vals(self, data):
+        row = 0
+        col = 0
+
+        for key, value in data.items():
+            item = self.item(row, col)
+            item.setText(f"{key}: {value}")
+
+            col += 1
+            if col >= self.columnCount():
+                col = 0
+                row += 1
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    window = QWidget()
+    layout = QVBoxLayout(window)
+    tableWidget = cpu_TableWidget()
+    layout.addWidget(tableWidget)
+    window.show()
+    app.exec() 
